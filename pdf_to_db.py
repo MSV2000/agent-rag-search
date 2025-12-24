@@ -1,6 +1,6 @@
 import os
 import fitz
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
 
 class PDFVecDataBase:
@@ -69,6 +69,9 @@ class PDFVecDataBase:
         finally:
             if doc:
                 doc.close()
+
+    def add_pdf_to_db(self, file_path: str, text_splitter, start_page: int = 2):
+        pass
 
 
 if __name__ == "__main__":
