@@ -8,7 +8,7 @@ def extract_text_from_pdf(file_path: str, start_page: int = 1) -> str:
 
     Args:
         file_path: путь к PDF файлу
-        start_page: номер страницы с которой начинать извлечение (по умолчанию 2)
+        start_page: номер страницы с которой начинать извлечение (по умолчанию 1)
 
     Returns:
         str: извлеченный текст
