@@ -1,5 +1,6 @@
 import os
 import fitz
+from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
@@ -79,7 +80,7 @@ class PDFVecDataBase:
                 doc.close()
 
     def add_pdf_to_db(self, file_path: str, collection_name: str, text_splitter: RecursiveCharacterTextSplitter = None,
-                      start_page: int = 1):
+                      start_page: int = 1, overwrite: bool = False) -> VectorStoreRetriever:
         """
         Извлечение текста из PDF файла и добавление в векторную базу данных
 
@@ -88,6 +89,7 @@ class PDFVecDataBase:
             collection_name: название коллекции
             text_splitter: объект для разделения текста
             start_page: номер страницы с которой начинать извлечение (по умолчанию 1)
+            overwrite: перезапись существующей коллекции или добавление к ней
 
         Returns:
             retriever: объект для поиска по векторной базе
@@ -113,43 +115,75 @@ class PDFVecDataBase:
 
         # Добавляем в базу данных
         return self.add_texts_to_db(
-            split_text=split_text,
+            text=split_text,
             collection_name=collection_name,
-            overwrite=False
+            overwrite=overwrite
         )
 
-    def add_texts_to_db(self, split_text: List[str], collection_name: str, overwrite: bool = False):
+    def add_texts_to_db(self, text: str | List[str], collection_name: str,
+                        overwrite: bool = False) -> VectorStoreRetriever:
         """
         Сохранение текста в векторную базу данных с разделением по коллекциям
 
         Args:
-            split_text: список строк текста
+            text: список строк текста
             collection_name: название коллекции
             overwrite: перезапись существующей коллекции или добавление к ней
 
         Returns:
             retriever: объект для поиска по векторной базе
         """
+        # Преобразование текста к списку, если нужно
+        if not isinstance(text, list):
+            text = [text]
+
         if overwrite:
             # Создание новой коллекции или перезаписывание существующей
             db = Chroma.from_texts(
-                texts=split_text,
+                texts=text,
                 embedding=self.embedding_function,
                 persist_directory=self.path_db,
                 collection_name=collection_name
             )
         else:
-            # Добавляем в существующую коллекцию
+            # Добавление в существующую коллекцию
             db = Chroma(
                 persist_directory=self.path_db,
                 embedding_function=self.embedding_function,
                 collection_name=collection_name
             )
-            db.add_texts(split_text)
+            db.add_texts(text)
 
-        # Создаем ретривер для поиска (топ 10 похожих результатов)
-        retriever = db.as_retriever(search_kwargs={"k": 10})
-        return retriever
+        # Создание объекта для поиска по векторной базе (топ 10 похожих результатов)
+        db_retriever = db.as_retriever(search_kwargs={"k": 10})
+        return db_retriever
+
+    def load_collection(self, collection_name: str) -> VectorStoreRetriever:
+        """
+        Загрузка существующей коллекции
+
+        Args:
+            collection_name: название коллекции
+
+        Returns:
+            retriever: объект для поиска по векторной базе
+
+        Raises:
+            ValueError: если collection_name пустой
+        """
+        # Проверка корректности collection_name
+        if collection_name == "":
+            raise ValueError(f"Название коллекции не должно быть пустым")
+
+        db = Chroma(
+            persist_directory=self.path_db,
+            embedding_function=self.embedding_function,
+            collection_name=collection_name
+        )
+
+        # Создание объекта для поиска по векторной базе (топ 10 похожих результатов)
+        db_retriever = db.as_retriever(search_kwargs={"k": 10})
+        return db_retriever
 
 
 if __name__ == "__main__":
@@ -159,4 +193,10 @@ if __name__ == "__main__":
     splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=1500,
                                               separators=["\n\n", "\n", ",", " ", ""])
 
-    pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="collection_1", text_splitter=splitter, start_page=2)
+    retriever = pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="collection_1", text_splitter=splitter,
+                                     start_page=2,
+                                     overwrite=True)
+
+    retriever = pdf_db.add_texts_to_db(text="aaaa", collection_name="collection_1", overwrite=True)
+
+    retriever = pdf_db.load_collection(collection_name="collection_1")
