@@ -10,5 +10,6 @@ __pycache__/
 *.iml
 
 # Файлы проекта
+chroma_db
 .env
 *.pdf
