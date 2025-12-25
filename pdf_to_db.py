@@ -2,6 +2,7 @@ import os
 import fitz
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_chroma import Chroma
 from typing import List
 
 
@@ -23,6 +24,8 @@ class PDFVecDataBase:
             model_kwargs={"device": "cpu"}
         )
 
+        self.path_db = path_db
+
     @staticmethod
     def extract_text_from_pdf(file_path: str, start_page: int = 1) -> str:
         """
@@ -39,14 +42,17 @@ class PDFVecDataBase:
             FileNotFoundError: если файл не существует
             ValueError: если file_path или start_page некорректен
         """
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Файл не найден: {file_path}")
+        # Проверка корректности start_page
+        if start_page < 1:
+            raise ValueError("Номер страницы должен быть положительным числом")
 
+        # Проверка корректности пути
         if not isinstance(file_path, str) or not file_path:
             raise ValueError("Некорректный путь к файлу")
 
-        if start_page < 1:
-            raise ValueError("Номер страницы должен быть положительным числом")
+        # Проверка существования файла
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Файл не найден: {file_path}")
 
         doc = None
         try:
@@ -89,11 +95,14 @@ class PDFVecDataBase:
         Raises:
             ValueError: если файл или collection_name пустые
         """
+        # Проверка корректности collection_name
         if collection_name == "":
             raise ValueError(f"Название коллекции не должно быть пустым")
 
+        # Извлечение текста из PDF файла
         text = self.extract_text_from_pdf(file_path=file_path, start_page=start_page)
 
+        # Проверка, что PDF не пустой
         if not text or text.strip() == "":
             raise ValueError(f"PDF файл {file_path} не содержит текст")
 
@@ -104,13 +113,43 @@ class PDFVecDataBase:
 
         # Добавляем в базу данных
         return self.add_texts_to_db(
-            text=split_text,
+            split_text=split_text,
             collection_name=collection_name,
             overwrite=False
         )
 
-    def add_texts_to_db(self, text: List[str], collection_name: str, overwrite: bool = False):
-        pass
+    def add_texts_to_db(self, split_text: List[str], collection_name: str, overwrite: bool = False):
+        """
+        Сохранение текста в векторную базу данных с разделением по коллекциям
+
+        Args:
+            split_text: список строк текста
+            collection_name: название коллекции
+            overwrite: перезапись существующей коллекции или добавление к ней
+
+        Returns:
+            retriever: объект для поиска по векторной базе
+        """
+        if overwrite:
+            # Создание новой коллекции или перезаписывание существующей
+            db = Chroma.from_texts(
+                texts=split_text,
+                embedding=self.embedding_function,
+                persist_directory=self.path_db,
+                collection_name=collection_name
+            )
+        else:
+            # Добавляем в существующую коллекцию
+            db = Chroma(
+                persist_directory=self.path_db,
+                embedding_function=self.embedding_function,
+                collection_name=collection_name
+            )
+            db.add_texts(split_text)
+
+        # Создаем ретривер для поиска (топ 10 похожих результатов)
+        retriever = db.as_retriever(search_kwargs={"k": 10})
+        return retriever
 
 
 if __name__ == "__main__":
@@ -120,4 +159,4 @@ if __name__ == "__main__":
     splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=1500,
                                               separators=["\n\n", "\n", ",", " ", ""])
 
-    pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="", text_splitter=splitter, start_page=2)
+    pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="collection_1", text_splitter=splitter, start_page=2)
