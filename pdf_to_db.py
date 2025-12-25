@@ -194,9 +194,8 @@ if __name__ == "__main__":
                                               separators=["\n\n", "\n", ",", " ", ""])
 
     retriever = pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="collection_1", text_splitter=splitter,
-                                     start_page=2,
-                                     overwrite=True)
+                                     start_page=2, overwrite=True)
 
-    retriever = pdf_db.add_texts_to_db(text="aaaa", collection_name="collection_1", overwrite=True)
+    # retriever = pdf_db.add_texts_to_db(text="text", collection_name="collection_1", overwrite=True)
 
-    retriever = pdf_db.load_collection(collection_name="collection_1")
+    # retriever = pdf_db.load_collection(collection_name="collection_1")
