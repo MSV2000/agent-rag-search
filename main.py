@@ -1,19 +1,28 @@
+import os
 import aiofiles
 import uvicorn
 from dataclasses import dataclass
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pathlib import Path
-from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pdf_to_db import PDFVecDataBase
+from dotenv import load_dotenv
 
-pdf_db = PDFVecDataBase(embeddings_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-                        path_db="chroma_db")
+# Загружаем переменные из .env файла
+load_dotenv()
+
+# Получаем переменные
+embeddings_model = os.getenv('EMBEDDINGS_MODEL')
+path_db = os.getenv('PATH_DB')
+upload_dir = os.getenv('UPLOAD_DIR')
+
+pdf_db = PDFVecDataBase(embeddings_model=embeddings_model,
+                        path_db=path_db)
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=1500,
                                           separators=["\n\n", "\n", ",", " ", ""])
 
-UPLOAD_DIR = Path("temp_uploads")
+UPLOAD_DIR = Path(upload_dir)
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 app = FastAPI()
