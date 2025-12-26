@@ -80,7 +80,7 @@ class PDFVecDataBase:
                 doc.close()
 
     def add_pdf_to_db(self, file_path: str, collection_name: str, text_splitter: RecursiveCharacterTextSplitter = None,
-                      start_page: int = 1, overwrite: bool = False) -> VectorStoreRetriever:
+                      start_page: int = 1, overwrite: bool = False) -> None:
         """
         Извлечение текста из PDF файла и добавление в векторную базу данных
 
@@ -90,9 +90,6 @@ class PDFVecDataBase:
             text_splitter: объект для разделения текста
             start_page: номер страницы с которой начинать извлечение (по умолчанию 1)
             overwrite: перезапись существующей коллекции или добавление к ней
-
-        Returns:
-            retriever: объект для поиска по векторной базе
 
         Raises:
             ValueError: если файл или collection_name пустые
@@ -114,14 +111,14 @@ class PDFVecDataBase:
             split_text = [text]
 
         # Добавляем в базу данных
-        return self.add_texts_to_db(
+        self.add_texts_to_db(
             text=split_text,
             collection_name=collection_name,
             overwrite=overwrite
         )
 
     def add_texts_to_db(self, text: str | List[str], collection_name: str,
-                        overwrite: bool = False) -> VectorStoreRetriever:
+                        overwrite: bool = False) -> None:
         """
         Сохранение текста в векторную базу данных с разделением по коллекциям
 
@@ -129,9 +126,6 @@ class PDFVecDataBase:
             text: список строк текста
             collection_name: название коллекции
             overwrite: перезапись существующей коллекции или добавление к ней
-
-        Returns:
-            retriever: объект для поиска по векторной базе
         """
         # Преобразование текста к списку, если нужно
         if not isinstance(text, list):
@@ -139,7 +133,7 @@ class PDFVecDataBase:
 
         if overwrite:
             # Создание новой коллекции или перезаписывание существующей
-            db = Chroma.from_texts(
+            Chroma.from_texts(
                 texts=text,
                 embedding=self.embedding_function,
                 persist_directory=self.path_db,
@@ -153,10 +147,6 @@ class PDFVecDataBase:
                 collection_name=collection_name
             )
             db.add_texts(text)
-
-        # Создание объекта для поиска по векторной базе (топ 10 похожих результатов)
-        db_retriever = db.as_retriever(search_kwargs={"k": 10})
-        return db_retriever
 
     def load_collection(self, collection_name: str) -> VectorStoreRetriever:
         """
@@ -193,9 +183,9 @@ if __name__ == "__main__":
     splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=1500,
                                               separators=["\n\n", "\n", ",", " ", ""])
 
-    retriever = pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="collection_1", text_splitter=splitter,
+    pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="collection_1", text_splitter=splitter,
                                      start_page=2, overwrite=True)
 
-    # retriever = pdf_db.add_texts_to_db(text="text", collection_name="collection_1", overwrite=True)
+    # pdf_db.add_texts_to_db(text="text", collection_name="collection_1", overwrite=True)
 
     # retriever = pdf_db.load_collection(collection_name="collection_1")
