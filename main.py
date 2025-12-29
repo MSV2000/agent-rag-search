@@ -87,7 +87,7 @@ async def add_pdf_to_db(collection_name: str = Form(..., description="Назва
         "action": "added"
     }
 
-@app.post("/get_existing_collections")
+@app.get("/get_existing_collections")
 async def get_existing_collections() -> dict[str, list[str]]:
     existing_collections = pdf_db.list_collection()
 
