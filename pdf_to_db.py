@@ -176,6 +176,18 @@ class PDFVecDataBase:
         db_retriever = db.as_retriever(search_kwargs={"k": 10})
         return db_retriever
 
+    def list_collection(self) -> List[str]:
+        """
+        Получение списка существующих коллекций
+
+        Returns:
+            existing_collections: список с названиями коллекций
+        """
+        client = chromadb.PersistentClient(path=self.path_db)
+        existing_collections = [col.name for col in client.list_collections()]
+
+        return existing_collections
+
     def delete_collection(self, collection_name: str) -> None:
         """
         Удаление существующей коллекции
@@ -192,8 +204,7 @@ class PDFVecDataBase:
             raise ValueError(f"Название коллекции не должно быть пустым")
 
         # Получаем список существующих коллекций
-        client = chromadb.PersistentClient(path=self.path_db)
-        existing_collections = [col.name for col in client.list_collections()]
+        existing_collections = self.list_collection()
 
         # Проверка существования коллекции
         if collection_name not in existing_collections:
