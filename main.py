@@ -42,7 +42,7 @@ class UserResponse:
 async def add_pdf_to_db(collection_name: str = Form(..., description="Название коллекции"),
                         start_page: int = Form(1, description="Страница, с которой начать обработку (по умолчанию 1)"),
                         overwrite: bool = Form(False, description="Перезаписать коллекцию если существует (по умолчанию False)"),
-                        file: UploadFile = File(..., description="PDF файл для загрузки")):
+                        file: UploadFile = File(..., description="PDF файл для загрузки")) -> dict[str, str]:
 
     if not file:
         raise HTTPException(status_code=400, detail="Файл не передан")
@@ -73,18 +73,40 @@ async def add_pdf_to_db(collection_name: str = Form(..., description="Назва
 
     if overwrite:
         return {
-            "message": f"Коллекция {collection_name} перезаписана. Файл {filename} загружен в коллекцию",
+            "message": f"Коллекция '{collection_name}' перезаписана. Файл {filename} загружен в коллекцию",
             "collection_name": collection_name,
             "filename": filename,
             "status": "success",
             "action": "overwritten"
         }
     return {
-        "message": f"Файл {filename} загружен в коллекцию {collection_name}",
+        "message": f"Файл {filename} загружен в коллекцию '{collection_name}'",
         "collection_name": collection_name,
         "filename": filename,
         "status": "success",
         "action": "added"
+    }
+
+@app.post("/get_existing_collections")
+async def get_existing_collections() -> dict[str, list[str]]:
+    existing_collections = pdf_db.list_collection()
+
+    return {
+        "existing_collections": existing_collections,
+    }
+
+@app.post("/delete_collection")
+async def delete_collection(collection_name: str = Form(..., description="Название коллекции")) -> dict[str, str]:
+
+    try:
+        pdf_db.delete_collection(collection_name=collection_name)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка удаления коллекции '{collection_name}' из векторной базы данных: {e}")
+
+    return {
+        "message": f"Коллекция '{collection_name}' удалена из векторной базы данных",
+        "status": "success",
+        "action": "delete"
     }
 
 @app.post("/question")
