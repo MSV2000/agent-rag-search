@@ -1,5 +1,6 @@
-import os
+import chromadb
 import fitz
+import os
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -175,6 +176,35 @@ class PDFVecDataBase:
         db_retriever = db.as_retriever(search_kwargs={"k": 10})
         return db_retriever
 
+    def delete_collection(self, collection_name: str) -> None:
+        """
+        Удаление существующей коллекции
+
+        Args:
+            collection_name: название коллекции
+
+        Raises:
+            ValueError: если collection_name пустой или коллекции не существует
+        """
+
+        # Проверка корректности collection_name
+        if collection_name == "":
+            raise ValueError(f"Название коллекции не должно быть пустым")
+
+        # Получаем список существующих коллекций
+        client = chromadb.PersistentClient(path=self.path_db)
+        existing_collections = [col.name for col in client.list_collections()]
+
+        # Проверка существования коллекции
+        if collection_name not in existing_collections:
+            raise ValueError(f"Коллекция '{collection_name}' не существует")
+
+        db = Chroma(
+            persist_directory=self.path_db,
+            collection_name=collection_name
+        )
+
+        db.delete_collection()
 
 if __name__ == "__main__":
     pdf_db = PDFVecDataBase(embeddings_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -184,8 +214,10 @@ if __name__ == "__main__":
                                               separators=["\n\n", "\n", ",", " ", ""])
 
     pdf_db.add_pdf_to_db(file_path="example.pdf", collection_name="collection_1", text_splitter=splitter,
-                                     start_page=2, overwrite=True)
+                         start_page=2, overwrite=True)
 
     # pdf_db.add_texts_to_db(text="text", collection_name="collection_1", overwrite=True)
 
     # retriever = pdf_db.load_collection(collection_name="collection_1")
+
+    pdf_db.delete_collection(collection_name="collection_1")
