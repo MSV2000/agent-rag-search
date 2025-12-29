@@ -5,7 +5,6 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from typing import List
 
 
 class PDFVecDataBase:
@@ -118,7 +117,7 @@ class PDFVecDataBase:
             overwrite=overwrite
         )
 
-    def add_texts_to_db(self, text: str | List[str], collection_name: str,
+    def add_texts_to_db(self, text: str | list[str], collection_name: str,
                         overwrite: bool = False) -> None:
         """
         Сохранение текста в векторную базу данных с разделением по коллекциям
@@ -176,7 +175,7 @@ class PDFVecDataBase:
         db_retriever = db.as_retriever(search_kwargs={"k": 10})
         return db_retriever
 
-    def list_collection(self) -> List[str]:
+    def list_collection(self) -> list[str]:
         """
         Получение списка существующих коллекций
 
