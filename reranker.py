@@ -2,6 +2,7 @@ from typing import Sequence
 from langchain_core.documents import Document
 from sentence_transformers import CrossEncoder
 
+
 class BgeRerank:
     """Класс для повторного ранжирования документов с использованием модели BGE (BAAI General Embedding)"""
 
@@ -16,7 +17,7 @@ class BgeRerank:
         self.model = CrossEncoder(model_name, device="cpu")
         self.top_n = top_n
 
-    def bge_rerank(self, query: str, docs: list[str]) -> list[tuple[int, float]]:
+    def bge_rerank(self, query: str, documents: list[str]) -> list[tuple[int, float]]:
         """
         Выполняет повторное ранжирование документов на основе их релевантности запросу
 
@@ -30,12 +31,27 @@ class BgeRerank:
                 - оценка релевантности (чем выше, тем релевантнее)
                 Список отсортирован по убыванию релевантности и обрезан до top_n
         """
-        model_inputs = [[query, doc] for doc in docs]
+        model_inputs = [[query, document] for document in documents]
         scores = self.model.predict(model_inputs)
         results = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
         return results[:self.top_n]
 
-    def compress_documents(self, documents: Sequence[Document], query: str) -> Sequence[Document]:
+    def compress_documents(self, query: str, documents: Sequence[Document]) -> Sequence[Document]:
+        """
+        Фильтрует и ранжирует документы, оставляя только наиболее релевантные запросу.
+
+        Этот метод является оберткой над bge_rerank для работы с объектами Document,
+        добавляя оценку релевантности в метаданные документов.
+
+        Args:
+            query: Поисковый запрос, для которого определяется релевантность
+            documents: Последовательность документов для фильтрации. Каждый документ должен иметь атрибут page_content
+            с текстом
+
+        Returns:
+            final_results: Отфильтрованная и отсортированная последовательность документов. Документы упорядочены по
+            убыванию релевантности. В метаданных каждого документа добавлено поле 'relevance_score'
+        """
         if len(documents) == 0:
             return []
         doc_list = list(documents)
