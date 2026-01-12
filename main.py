@@ -7,17 +7,21 @@ from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pdf_to_db import PDFVecDataBase
 from dotenv import load_dotenv
+from reranker import Rerank
 
 # Загружаем переменные из .env файла
 load_dotenv()
 
 # Получаем переменные
 embeddings_model = os.getenv('EMBEDDINGS_MODEL')
+rerank_model = os.getenv('RERANK_MODEL')
 path_db = os.getenv('PATH_DB')
 upload_dir = os.getenv('UPLOAD_DIR')
 
 pdf_db = PDFVecDataBase(embeddings_model=embeddings_model,
                         path_db=path_db)
+
+reranker = Rerank(rerank_model, top_n=5)
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=1500,
                                           separators=["\n\n", "\n", ",", " ", ""])
@@ -42,9 +46,9 @@ class UserResponse:
 @app.post("/add_pdf_to_db")
 async def add_pdf_to_db(collection_name: str = Form(..., description="Название коллекции"),
                         start_page: int = Form(1, description="Страница, с которой начать обработку (по умолчанию 1)"),
-                        overwrite: bool = Form(False, description="Перезаписать коллекцию если существует (по умолчанию False)"),
+                        overwrite: bool = Form(False,
+                                               description="Перезаписать коллекцию если существует (по умолчанию False)"),
                         file: UploadFile = File(..., description="PDF файл для загрузки")) -> dict[str, str]:
-
     if not file:
         raise HTTPException(status_code=400, detail="Файл не передан")
 
@@ -88,6 +92,7 @@ async def add_pdf_to_db(collection_name: str = Form(..., description="Назва
         "action": "added"
     }
 
+
 @app.get("/get_existing_collections")
 async def get_existing_collections() -> dict[str, list[str]]:
     existing_collections = pdf_db.list_collection()
@@ -96,13 +101,14 @@ async def get_existing_collections() -> dict[str, list[str]]:
         "existing_collections": existing_collections,
     }
 
+
 @app.post("/delete_collection")
 async def delete_collection(collection_name: str = Form(..., description="Название коллекции")) -> dict[str, str]:
-
     try:
         pdf_db.delete_collection(collection_name=collection_name)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Ошибка удаления коллекции '{collection_name}' из векторной базы данных: {e}")
+        raise HTTPException(status_code=400,
+                            detail=f"Ошибка удаления коллекции '{collection_name}' из векторной базы данных: {e}")
 
     return {
         "message": f"Коллекция '{collection_name}' удалена из векторной базы данных",
@@ -110,16 +116,31 @@ async def delete_collection(collection_name: str = Form(..., description="Наз
         "action": "delete"
     }
 
+
 @app.post("/question")
 async def answers_questions(data: UserRequest) -> UserResponse:
     try:
         collection_name = data.collection_name
         question = data.question
 
+        if not collection_name:
+            raise HTTPException(status_code=422, detail="Отсутствует название коллекции")
         if not question:
             raise HTTPException(status_code=422, detail="Отсутствует вопрос")
-        else:
-            return UserResponse(answer="Good job!")
+
+        existing_collections = pdf_db.list_collection()
+        if collection_name not in existing_collections:
+            raise HTTPException(status_code=400, detail=f"Отсутствует коллекция с названием '{collection_name}'")
+
+        collection_documents = pdf_db.load_collection(collection_name=collection_name).invoke(question)
+
+        second_docs = reranker.compress_documents(query=question, documents=collection_documents)
+
+        context = ""
+        for i in range(5):
+            context += second_docs[i].page_content + "\n===========\n"
+
+        return UserResponse(answer=context)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Ошибка выполнения запроса: {e}")
