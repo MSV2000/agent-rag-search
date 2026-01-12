@@ -146,14 +146,12 @@ class PDFVecDataBase:
                 texts=text,
                 embedding=self.embedding_function,
                 persist_directory=collection_path,
-                collection_name=collection_name
             )
         else:
             # Добавление в существующую коллекцию
             db = Chroma(
                 persist_directory=collection_path,
                 embedding_function=self.embedding_function,
-                collection_name=collection_name
             )
             db.add_texts(text)
 
@@ -177,7 +175,6 @@ class PDFVecDataBase:
         db = Chroma(
             persist_directory=self._collection_path(collection_name),
             embedding_function=self.embedding_function,
-            collection_name=collection_name
         )
 
         # Создание объекта для поиска по векторной базе (топ 10 похожих результатов)
