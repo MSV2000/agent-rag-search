@@ -3,10 +3,10 @@ from langchain_core.documents import Document
 from sentence_transformers import CrossEncoder
 
 
-class BgeRerank:
-    """Класс для повторного ранжирования документов с использованием модели BGE (BAAI General Embedding)"""
+class Rerank:
+    """Класс для повторного ранжирования документов"""
 
-    def __init__(self, model_name: str = "BAAI/bge-reranker-large", top_n: int = 5):
+    def __init__(self, model_name: str, top_n: int = 5):
         """
         Инициализация класса
 
@@ -17,7 +17,7 @@ class BgeRerank:
         self.model = CrossEncoder(model_name, device="cpu")
         self.top_n = top_n
 
-    def bge_rerank(self, query: str, documents: list[str]) -> list[tuple[int, float]]:
+    def rerank(self, query: str, documents: list[str]) -> list[tuple[int, float]]:
         """
         Выполняет повторное ранжирование документов на основе их релевантности запросу
 
@@ -56,7 +56,7 @@ class BgeRerank:
             return []
         doc_list = list(documents)
         _docs = [d.page_content for d in doc_list]
-        results = self.bge_rerank(query, _docs)
+        results = self.rerank(query, _docs)
         final_results = []
         for r in results:
             doc = doc_list[r[0]]
