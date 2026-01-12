@@ -1,6 +1,7 @@
 import chromadb
 import fitz
 import os
+import shutil
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -117,6 +118,9 @@ class PDFVecDataBase:
             overwrite=overwrite
         )
 
+    def _collection_path(self, collection_name: str) -> str:
+        return os.path.join(self.path_db, collection_name)
+
     def add_texts_to_db(self, text: str | list[str], collection_name: str,
                         overwrite: bool = False) -> None:
         """
@@ -131,18 +135,23 @@ class PDFVecDataBase:
         if not isinstance(text, list):
             text = [text]
 
+        collection_path = self._collection_path(collection_name)
+
+        if overwrite and os.path.exists(collection_path):
+            shutil.rmtree(collection_path)
+
         if overwrite:
             # Создание новой коллекции или перезаписывание существующей
             Chroma.from_texts(
                 texts=text,
                 embedding=self.embedding_function,
-                persist_directory=self.path_db,
+                persist_directory=collection_path,
                 collection_name=collection_name
             )
         else:
             # Добавление в существующую коллекцию
             db = Chroma(
-                persist_directory=self.path_db,
+                persist_directory=collection_path,
                 embedding_function=self.embedding_function,
                 collection_name=collection_name
             )
@@ -166,7 +175,7 @@ class PDFVecDataBase:
             raise ValueError(f"Название коллекции не должно быть пустым")
 
         db = Chroma(
-            persist_directory=self.path_db,
+            persist_directory=self._collection_path(collection_name),
             embedding_function=self.embedding_function,
             collection_name=collection_name
         )
@@ -182,39 +191,24 @@ class PDFVecDataBase:
         Returns:
             existing_collections: список с названиями коллекций
         """
-        client = chromadb.PersistentClient(path=self.path_db)
-        existing_collections = [col.name for col in client.list_collections()]
+        if not os.path.exists(self.path_db):
+            return []
 
-        return existing_collections
+        return [
+            name for name in os.listdir(self.path_db)
+            if os.path.isdir(os.path.join(self.path_db, name))
+        ]
 
     def delete_collection(self, collection_name: str) -> None:
-        """
-        Удаление существующей коллекции
+        if not collection_name:
+            raise ValueError("Название коллекции не должно быть пустым")
 
-        Args:
-            collection_name: название коллекции
+        collection_path = self._collection_path(collection_name)
 
-        Raises:
-            ValueError: если collection_name пустой или коллекции не существует
-        """
-
-        # Проверка корректности collection_name
-        if collection_name == "":
-            raise ValueError(f"Название коллекции не должно быть пустым")
-
-        # Получаем список существующих коллекций
-        existing_collections = self.list_collection()
-
-        # Проверка существования коллекции
-        if collection_name not in existing_collections:
+        if not os.path.exists(collection_path):
             raise ValueError(f"Коллекция '{collection_name}' не существует")
 
-        db = Chroma(
-            persist_directory=self.path_db,
-            collection_name=collection_name
-        )
-
-        db.delete_collection()
+        shutil.rmtree(collection_path)
 
 if __name__ == "__main__":
     pdf_db = PDFVecDataBase(embeddings_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
