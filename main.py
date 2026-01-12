@@ -30,6 +30,7 @@ app = FastAPI()
 
 @dataclass
 class UserRequest:
+    collection_name: str
     question: str
 
 
@@ -112,6 +113,7 @@ async def delete_collection(collection_name: str = Form(..., description="Наз
 @app.post("/question")
 async def answers_questions(data: UserRequest) -> UserResponse:
     try:
+        collection_name = data.collection_name
         question = data.question
 
         if not question:
