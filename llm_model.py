@@ -63,7 +63,7 @@ class LLMModel:
                     temperature=0.1,
                     top_p=0.95,
                 )[0]
-                print("a")
+
             else:
                 output_ids = self.model.generate(
                     **data,
@@ -74,7 +74,6 @@ class LLMModel:
                     top_p=0.8,
                     top_k=20,
                 )[0]
-                print("b")
 
         output_ids = output_ids[len(data["input_ids"][0]):]
         output = self.tokenizer.decode(output_ids, skip_special_tokens=True)
