@@ -119,10 +119,18 @@ class PDFVecDataBase:
         )
 
     def _collection_path(self, collection_name: str) -> str:
+        """
+        Формирование пути к директории конкретной коллекции
+
+        Args:
+            collection_name: название коллекции
+
+        Returns:
+            str: полный путь к директории коллекции
+        """
         return os.path.join(self.path_db, collection_name)
 
-    def add_texts_to_db(self, text: str | list[str], collection_name: str,
-                        overwrite: bool = False) -> None:
+    def add_texts_to_db(self, text: str | list[str], collection_name: str, overwrite: bool = False) -> None:
         """
         Сохранение текста в векторную базу данных с разделением по коллекциям
 
@@ -144,8 +152,8 @@ class PDFVecDataBase:
             # Создание новой коллекции или перезаписывание существующей
             Chroma.from_texts(
                 texts=text,
-                embedding=self.embedding_function,
                 persist_directory=collection_path,
+                embedding=self.embedding_function,
             )
         else:
             # Добавление в существующую коллекцию
@@ -186,17 +194,23 @@ class PDFVecDataBase:
         Получение списка существующих коллекций
 
         Returns:
-            existing_collections: список с названиями коллекций
+            list[str]: список с названиями коллекций
         """
         if not os.path.exists(self.path_db):
             return []
 
-        return [
-            name for name in os.listdir(self.path_db)
-            if os.path.isdir(os.path.join(self.path_db, name))
-        ]
+        return [name for name in os.listdir(self.path_db) if os.path.isdir(os.path.join(self.path_db, name))]
 
     def delete_collection(self, collection_name: str) -> None:
+        """
+        Удаление существующей коллекции
+
+        Args:
+            collection_name: название коллекции
+
+        Raises:
+            ValueError: если collection_name пустой или коллекции не существует
+        """
         if not collection_name:
             raise ValueError("Название коллекции не должно быть пустым")
 
@@ -206,6 +220,7 @@ class PDFVecDataBase:
             raise ValueError(f"Коллекция '{collection_name}' не существует")
 
         shutil.rmtree(collection_path)
+
 
 if __name__ == "__main__":
     pdf_db = PDFVecDataBase(embeddings_model="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
