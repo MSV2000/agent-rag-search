@@ -136,9 +136,8 @@ async def answers_questions(data: UserRequest) -> UserResponse:
 
         second_docs = reranker.compress_documents(query=question, documents=collection_documents)
 
-        context = ""
-        for i in range(5):
-            context += second_docs[i].page_content + "\n===========\n"
+        separator = "\n===========\n"
+        context = separator.join(doc.page_content for doc in second_docs)
 
         return UserResponse(answer=context)
 
