@@ -48,17 +48,33 @@ class LLMModel:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             self.generation_config = GenerationConfig.from_pretrained(self.model_name)
 
-    def generate(self, prompt):
+    def generate(self, prompt, tool_call_mode):
         data = self.tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
         data = {k: v.to(self.model.device) for k, v in data.items()}
         data.pop("token_type_ids", None)
 
         with torch.no_grad():
-            output_ids = self.model.generate(
-                **data,
-                generation_config=self.generation_config,
-                max_new_tokens=8192,
-            )[0]
+            if tool_call_mode:
+                output_ids = self.model.generate(
+                    **data,
+                    generation_config=self.generation_config,
+                    max_new_tokens=8192,
+                    do_sample=False,
+                    temperature=0.1,
+                    top_p=0.95,
+                )[0]
+                print("a")
+            else:
+                output_ids = self.model.generate(
+                    **data,
+                    generation_config=self.generation_config,
+                    max_new_tokens=8192,
+                    do_sample=True,
+                    temperature=0.7,
+                    top_p=0.8,
+                    top_k=20,
+                )[0]
+                print("b")
 
         output_ids = output_ids[len(data["input_ids"][0]):]
         output = self.tokenizer.decode(output_ids, skip_special_tokens=True)
