@@ -48,7 +48,7 @@ class LLMModel:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             self.generation_config = GenerationConfig.from_pretrained(self.model_name)
 
-    def generate(self, prompt, tool_call_mode):
+    def generate(self, prompt, tool_call_mode: bool = False):
         data = self.tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
         data = {k: v.to(self.model.device) for k, v in data.items()}
         data.pop("token_type_ids", None)
@@ -95,7 +95,6 @@ class LLMModel:
         ]
 
         prompt = self.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
-        print(prompt)
 
         output = self.generate(prompt)
         return output
