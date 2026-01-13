@@ -8,26 +8,31 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pdf_to_db import PDFVecDataBase
 from dotenv import load_dotenv
 from reranker import Rerank
+from llm_model import LLMModel
 
 # Загружаем переменные из .env файла
 load_dotenv()
 
 # Получаем переменные
-embeddings_model = os.getenv('EMBEDDINGS_MODEL')
-rerank_model = os.getenv('RERANK_MODEL')
-path_db = os.getenv('PATH_DB')
-upload_dir = os.getenv('UPLOAD_DIR')
+EMBEDDINGS_MODEL = os.getenv('EMBEDDINGS_MODEL')
+RERANK_MODEL = os.getenv('RERANK_MODEL')
+LLM_MODEL = os.getenv('LLM_MODEL')
+PATH_DB = os.getenv('PATH_DB')
+UPLOAD_DIR = os.getenv('UPLOAD_DIR')
 
-pdf_db = PDFVecDataBase(embeddings_model=embeddings_model,
-                        path_db=path_db)
+pdf_db = PDFVecDataBase(embeddings_model=EMBEDDINGS_MODEL,
+                        path_db=PATH_DB)
 
-reranker = Rerank(rerank_model, top_n=5)
+reranker = Rerank(RERANK_MODEL, top_n=5)
+
+llm_model = LLMModel(LLM_MODEL)
+llm_model.load_model()
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=1500,
                                           separators=["\n\n", "\n", ",", " ", ""])
 
-UPLOAD_DIR = Path(upload_dir)
-UPLOAD_DIR.mkdir(exist_ok=True)
+upload_dir = Path(UPLOAD_DIR)
+upload_dir.mkdir(exist_ok=True)
 
 app = FastAPI()
 
@@ -58,7 +63,7 @@ async def add_pdf_to_db(collection_name: str = Form(..., description="Назва
     if not filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail=f"Файл {filename} не имеет расширения .pdf")
 
-    file_path = UPLOAD_DIR / filename
+    file_path = upload_dir / filename
 
     # Асинхронное сохранение файла
     try:
@@ -139,11 +144,13 @@ async def answers_questions(data: UserRequest) -> UserResponse:
         separator = "\n===========\n"
         context = separator.join(doc.page_content for doc in second_docs)
 
-        return UserResponse(answer=context)
+        answer = llm_model.answer_question(query=question, context=context)
+
+        return UserResponse(answer=answer)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Ошибка выполнения запроса: {e}")
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="192.168.10.148", port=8080)
+    uvicorn.run(app, host="192.168.10.169", port=8080)
