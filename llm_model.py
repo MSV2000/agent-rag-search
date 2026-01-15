@@ -60,8 +60,6 @@ class LLMModel:
                     generation_config=self.generation_config,
                     max_new_tokens=8192,
                     do_sample=False,
-                    temperature=0.1,
-                    top_p=0.95,
                 )[0]
 
             else:
@@ -69,10 +67,9 @@ class LLMModel:
                     **data,
                     generation_config=self.generation_config,
                     max_new_tokens=8192,
-                    do_sample=True,
-                    temperature=0.7,
-                    top_p=0.8,
-                    top_k=20,
+                    temperature=0.2,
+                    top_p=0.9,
+                    top_k=40,
                 )[0]
 
         output_ids = output_ids[len(data["input_ids"][0]):]
