@@ -35,5 +35,5 @@ def google_search(query, search_id: str, api_key: str) -> dict:
 
 
 if __name__ == "__main__":
-    results = google_search("Погода в Спб", search_id, api_key)
+    results = google_search("Погода в Спб", SEARCH_ID, API_KEY)
     print(results)
