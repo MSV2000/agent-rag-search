@@ -129,3 +129,6 @@ def google_search(query, search_id: str, api_key: str) -> dict:
 if __name__ == "__main__":
     results = google_search("Погода в Спб", SEARCH_ID, API_KEY)
     print(results)
+
+    llm_context = collect_for_llm(results)
+    print(llm_context[:3000])
