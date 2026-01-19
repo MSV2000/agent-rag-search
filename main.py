@@ -1,6 +1,7 @@
 import os
 import aiofiles
 import uvicorn
+from agent import Agent
 from dataclasses import dataclass
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pathlib import Path
@@ -27,6 +28,8 @@ reranker = Rerank(RERANK_MODEL, top_n=5)
 
 llm_model = LLMModel(LLM_MODEL)
 llm_model.load_model()
+
+agent = Agent(llm=llm_model)
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=1500,
                                           separators=["\n\n", "\n", ",", " ", ""])
@@ -144,7 +147,7 @@ async def answers_questions(data: UserRequest) -> UserResponse:
         separator = "\n===========\n"
         context = separator.join(doc.page_content for doc in second_docs)
 
-        answer = llm_model.answer_question(query=question, context=context)
+        answer = agent.run(query=question, context=context)
 
         return UserResponse(answer=answer)
 
